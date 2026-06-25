@@ -78,25 +78,25 @@ pipeline {
 
                             echo ""
                             echo "╔══════════════════════════════════════════════════════════════════╗"
-                            echo "║           💰 ONE-CLICK INFRA — COST INTELLIGENCE REPORT                            ║"
-                            echo "║              Powered by Infracost · Built by One-Click-Ops                          ║"
+                            echo "║               ONE-CLICK INFRA — COST INTELLIGENCE REPORT         ║                    ║"
+                            echo "║              Powered by Infracost · Built by One-Click-Ops       ║                   ║"
                             echo "╚══════════════════════════════════════════════════════════════════╝"
                             echo ""
                             cat infracost.txt || true
                             echo ""
-                            echo "  💵 Estimated Monthly Cost : $TOTAL_COST"
-                            echo "  🚦 Cost Gate Threshold    : $THRESHOLD/month"
+                            echo "     Estimated Monthly Cost : $TOTAL_COST"
+                            echo "     Cost Gate Threshold    : $THRESHOLD/month"
 
                             if [ "$(echo "$TOTAL_COST > $THRESHOLD" | python3 -c 'import sys; a,op,b=sys.stdin.read().split(); print(float(a)>float(b))')" = "True" ]; then
-                                echo "  ❌ COST GATE FAILED — Estimate exceeds threshold!"
-                                echo "  🛑 Pipeline blocked to prevent unexpected AWS spend."
+                                echo "   COST GATE FAILED — Estimate exceeds threshold!"
+                                echo "   Pipeline blocked to prevent unexpected AWS spend."
                                 echo ""
                                 exit 1
                             else
-                                echo "  ✅ Cost gate passed — estimate within $THRESHOLD/month threshold"
-                                echo "  📊 60 cloud resources scanned (7 paid · 52 free)"
-                                echo "  🔒 No secrets or credentials sent to Infracost Cloud API"
-                                echo "  🌍 Region: ap-south-1 (Mumbai) · Stack: EKS + RDS + ECR"
+                                echo "   Cost gate passed — estimate within $THRESHOLD/month threshold"
+                                echo "   60 cloud resources scanned (7 paid · 52 free)"
+                                echo "   No secrets or credentials sent to Infracost Cloud API"
+                                echo "   Region: ap-south-1 (Mumbai) · Stack: EKS + RDS + ECR"
                                 echo ""
                             fi
                         '''
@@ -294,8 +294,8 @@ pipeline {
             sh '''
                 echo ""
                 echo "╔══════════════════════════════════════════════════════════════════╗"
-                echo "║                ONE-CLICK-OPS PIPELINE SUCCEEDED                                     ║"
-                echo "║         Code → Scanned → Built → Pushed → Deployed → Verified                       ║"
+                echo "║                ONE-CLICK-OPS PIPELINE SUCCEEDED                  ║"
+                echo "║         Code → Scanned → Built → Pushed → Deployed → Verified    ║"
                 echo "╚══════════════════════════════════════════════════════════════════╝"
                 echo ""
             '''
