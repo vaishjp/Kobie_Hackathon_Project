@@ -4,10 +4,8 @@ pipeline {
     }
 
     environment {
-        AWS_REGION     = 'ap-south-1'
-        AWS_ACCOUNT_ID = '155734788051'
-        BACKEND_REPO   = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/backend"
-        FRONTEND_REPO  = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/frontend"
+        BACKEND_REPO   = "ghcr.io/vaishjp/backend"
+        FRONTEND_REPO  = "ghcr.io/vaishjp/frontend"
         GITOPS_REPO    = 'https://github.com/vaishjp/oneclick-gitops.git'
     }
 
@@ -78,8 +76,8 @@ pipeline {
 
                             echo ""
                             echo "╔══════════════════════════════════════════════════════════════════╗"
-                            echo "║               ONE-CLICK INFRA — COST INTELLIGENCE REPORT         ║                    ║"
-                            echo "║              Powered by Infracost · Built by One-Click-Ops       ║                   ║"
+                            echo "║               ONE-CLICK INFRA — COST INTELLIGENCE REPORT         ║"
+                            echo "║              Powered by Infracost · Built by One-Click-Ops       ║"
                             echo "╚══════════════════════════════════════════════════════════════════╝"
                             echo ""
                             cat infracost.txt || true
@@ -87,16 +85,14 @@ pipeline {
                             echo "     Estimated Monthly Cost : $TOTAL_COST"
                             echo "     Cost Gate Threshold    : $THRESHOLD/month"
 
-                            if [ "$(echo "$TOTAL_COST > $THRESHOLD" | python3 -c 'import sys; a,op,b=sys.stdin.read().split(); print(float(a)>float(b))')" = "True" ]; then
+                            if [ "$(echo "$TOTAL_COST $THRESHOLD" | python3 -c 'import sys; a,b=sys.stdin.read().split(); print(float(a)>float(b))')" = "True" ]; then
                                 echo "   COST GATE FAILED — Estimate exceeds threshold!"
                                 echo "   Pipeline blocked to prevent unexpected AWS spend."
                                 echo ""
                                 exit 1
                             else
                                 echo "   Cost gate passed — estimate within $THRESHOLD/month threshold"
-                                echo "   60 cloud resources scanned (7 paid · 52 free)"
                                 echo "   No secrets or credentials sent to Infracost Cloud API"
-                                echo "   Region: ap-south-1 (Mumbai) · Stack: EKS + RDS + ECR"
                                 echo ""
                             fi
                         '''
@@ -190,19 +186,16 @@ pipeline {
             }
         }
 
-        stage('Push to ECR') {
+        stage('Push to GHCR') {
             steps {
                 container('jnlp') {
-                    sh """
-                        export PATH=/shared-bin:\$PATH
-
-                        aws ecr get-login-password --region ${AWS_REGION} | \
-                        docker login --username AWS --password-stdin \
-                        ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
-
-                        docker push ${BACKEND_REPO}:${env.IMAGE_TAG}
-                        docker push ${FRONTEND_REPO}:${env.IMAGE_TAG}
-                    """
+                    withCredentials([usernamePassword(credentialsId: 'github-creds', usernameVariable: 'GH_USER', passwordVariable: 'GH_TOKEN')]) {
+                        sh """
+                            echo \$GH_TOKEN | docker login ghcr.io -u \$GH_USER --password-stdin
+                            docker push ${BACKEND_REPO}:${env.IMAGE_TAG}
+                            docker push ${FRONTEND_REPO}:${env.IMAGE_TAG}
+                        """
+                    }
                 }
             }
         }
@@ -212,7 +205,7 @@ pipeline {
                 container('jnlp') {
                     dir('gitops') {
                         git(
-                            branch: 'main',
+                            branch: 'local-demo',
                             credentialsId: 'github-creds',
                             url: "${GITOPS_REPO}"
                         )
@@ -240,7 +233,7 @@ pipeline {
 
                                 git add apps/oneclick/helmrelease.yaml helm/oneclick/values.yaml
                                 git commit -m "chore: deploy ${env.IMAGE_TAG}" || echo "Nothing to commit"
-                                git push https://\${GITHUB_USER}:\${GITHUB_TOKEN}@github.com/vaishjp/oneclick-gitops.git main
+                                git push https://\${GITHUB_USER}:\${GITHUB_TOKEN}@github.com/vaishjp/oneclick-gitops.git local-demo
                             """
                         }
                     }
@@ -254,9 +247,9 @@ pipeline {
                     sh """
                         export PATH=/shared-bin:\$PATH
 
-                        aws eks update-kubeconfig --name oneclick-cluster --region ap-south-1
-
                         echo "Polling FluxCD HelmRelease status..."
+
+                        sleep 20
 
                         TIMEOUT=300
                         INTERVAL=15
